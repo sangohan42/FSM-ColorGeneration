@@ -13,10 +13,9 @@
             CGPROGRAM
 
             // Pragmas
-    #pragma vertex vertex
-    #pragma fragment fragment
+            #pragma vertex vertex
+            #pragma fragment fragment
 
-            // User Defined Variables
             uniform float4 _Color;
 
             // Base Input Structs

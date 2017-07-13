@@ -3,9 +3,11 @@ using System.Collections;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
+using DG.Tweening;
 
 public class FSMManager : MonoBehaviour
 {
+    private static readonly int VALIDATE_STATE_DISPLAY_TIME = 1;
 
     private RandomColorizeStateMachine sm;
 
@@ -13,6 +15,7 @@ public class FSMManager : MonoBehaviour
     public Material displayedColorMaterial;
 
     public Text currentStateText;
+    public Text remainingTimeText;
     public GameObject isValidGO;
     public GameObject isInvalidGO;
 
@@ -71,13 +74,24 @@ public class FSMManager : MonoBehaviour
             currentStateText.text = token.ToString();
     }
 
+    // Display remaining time before coming back to the GenerateState
+    public void SetRemainingTimeLabel( float remainingTime )
+    {
+        if ( remainingTimeText )
+        {
+            if( !remainingTimeText.isActiveAndEnabled)
+                remainingTimeText.enabled = true;
+            remainingTimeText.text = "( Remaining time = " + string.Format( "{0:N2}", remainingTime ) + " )";
+        }
+    }
+
     // Display if color is valid or not
     public void SetIsValidLabel( bool isValid )
     {
         if ( !isValid )
             generateNextColorButton.interactable = true;
 
-        StartCoroutine( DisplayColorValidationResult( 2f, isValid ? isValidGO : isInvalidGO ) );
+        StartCoroutine( DisplayColorValidationResult( VALIDATE_STATE_DISPLAY_TIME, isValid ? isValidGO : isInvalidGO ) );
     }
 
     IEnumerator DisplayColorValidationResult( float displayTime, GameObject go )
@@ -102,11 +116,31 @@ public class FSMManager : MonoBehaviour
 
     IEnumerator DisplayValidatedColor( float displayTime, Color? color )
     {
+        // Display validated color
         displayedColorMaterial.color = color ?? new Color( 0, 0, 0, 0 );
-        yield return new WaitForSeconds( displayTime );
+
+        // Display remaining time
+        bool complete = false;
+        float elapsedTime = 0f;
+
+        DOTween.To( () => { return elapsedTime; }, ( v ) => { elapsedTime = v; }, displayTime, displayTime )
+        .SetEase( Ease.Linear )
+        .OnComplete( () =>
+        {
+            complete = true;
+            Debug.Log( "DISPLAY TIME COMPLETE" );
+        } );
+        while ( !complete )
+        {
+            SetRemainingTimeLabel( displayTime - elapsedTime );
+            yield return null;
+        }
+        if( remainingTimeText )
+            remainingTimeText.enabled = false;
+
+        // Perform Action to comeback to the generate state
         ComeBackToGenerateState();
 
         generateNextColorButton.interactable = true;
-        EventSystem.current.SetSelectedGameObject( null );
     }
 }
